@@ -1,6 +1,8 @@
 <template>
-  <div class="goods-item">
-      <img :src="goodsItem.show.img" alt="">
+  <div class="goods-item" @click="itemClick">
+      <div class="wrap">
+        <img :src="goodsItem.show.img" alt="" @load="itemImageLoad">
+      </div>
       <div class="goods-info">
         <p class="message">{{goodsItem.title}}</p>
         <span class="price">{{goodsItem.price}}</span>
@@ -19,6 +21,16 @@
           return {}
         }
       }
+    },
+    methods: {
+      itemImageLoad () {
+        // 向事件总线 发送一个事件
+        this.$bus.$emit('itemImageLoad')
+      },
+      itemClick () {
+        console.log('--详情--');
+
+      }
     }
   }
 </script>
@@ -30,11 +42,24 @@
 
     position: relative;
   }
+  .wrap {
+    width: 150px;
+    height: 220px;
+    overflow: hidden;
+    border-radius: 5px;
+
+    position: relative;
+  }
 
   .goods-item img {
     width: 150px;
     /*height: 220px;*/
+
     border-radius: 5px;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    margin: auto;
   }
 
   .goods-info {

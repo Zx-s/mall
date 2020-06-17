@@ -16,4 +16,8 @@
     right: 5px;
     bottom: 50px;
   }
+  .back-top img {
+    width: 50px;
+    height: 50px;
+  }
 </style>

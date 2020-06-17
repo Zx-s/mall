@@ -45,27 +45,40 @@
         click: true,
       })
 
-      this.scroll.on('scroll',(position) => {
-        // console.log(position);
-        // console.log(this.probeType);
-        this.$emit('scroll', position)
-      })
+      // 当probeType 等于2,3时,才需要监听
+      if(this.probeType === 2 || this.probeType === 3) {
+        this.scroll.on('scroll',(position) => {
+          this.$emit('scroll', position)
+        })
+      }
 
-      this.scroll.on('pullingUp', ()=> {
-         this.$emit('pullingUp')
-      })
+      // 当pullUpLoad 为true时,才执行下面代码
+      if(this.pullUpLoad) {
+        this.scroll.on('pullingUp', ()=> {
+          this.$emit('pullingUp')
+        })
+      }
+
     },
     methods: {
       //es6 新语法,参数可以设置默认值,当使用这个方法时,没有传递这个参数,就使用默认值
       scrollTo(x, y,time = 300) {
         //调用BScroll 的回到顶部的方法,
-        this.scroll.scrollTo(x, y, time)
+        // 在调用这个scroll这个对象的 scrollTo() 方法时, 先判断有没有这个scroll对象
+        this.scroll && this.scroll.scrollTo(x, y, time)
       },
       finishPullUp() {
-        this.scroll.finishPullUp()
+        // 在调用这个scroll这个对象的 finishPullUp() 方法时, 先判断有没有这个scroll对象
+        this.scroll && this.scroll.finishPullUp()
       },
       refresh() {
-        this.scroll.refresh()
+        // 在调用这个scroll这个对象的 refresh() 方法时, 先判断有没有这个scroll对象
+        // console.log('----');
+        this.scroll && this.scroll.refresh()
+      },
+      getScrollY() {
+        //判断有没有 scroll这个对象
+        return this.scroll ? this.scroll.y : 0
       }
 
     }
