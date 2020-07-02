@@ -1,200 +1,207 @@
 <template>
-  <div id="home">
-    <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-    <tab-control :titles="['流行','新款','精选']" @tabClick="tabClick" ref="tabControl1" class="tab-control" v-show="isTabFixed"/>
-<!--    //在往子组件里传值时, :probe-type="3" 前面不加 冒号(:)时,传过去的就是一个字符串类型,加上冒号,传过去的就是一个Number类型的-->
-    <scroll class="content" ref="scroll"  :probe-type="3" @scroll="contentScroll" :pull-up-load="true" @pullingUp="loadMore">
-      <home-swiper :banners="banners" @swiperImageLoad="swiperImageLoad"/>
-      <home-recommend-view :recommends="recommends"/>
-      <feature-view/>
-       <tab-control :titles="['流行','新款','精选']" @tabClick="tabClick" ref="tabControl2"/>
-      <goods-list :goods="showGoods"/>
+  <div class="home">
+    <!-- 标题栏 -->
+    <nav-bar class="home-nav">
+      <div slot="center">购物街</div>
+    </nav-bar>
+
+    <tab-control
+      :titles="tabControlTitles"
+      @tabClick="tabClick"
+      class="home-tab-control"
+      ref="tabControl"
+      v-show="isShowTab"
+    />
+
+    <!-- BScroll滚动区域 -->
+    <scroll
+      :probe-type="3"
+      :pull-up-load="true"
+      @backTopScroll="backTopScroll"
+      @pullingUp="loadMore"
+      class="scroll-height"
+      ref="scroll"
+    >
+      <!-- 轮播图 -->
+      <my-swiper :swiper-list="banners" @swiperLoad="swiperLoad" />
+      <!-- 推荐分类 -->
+      <recommend-view :recommends="recommends" />
+      <!-- 本周流行 -->
+      <feature-view />
+      <!-- tabBarControl -->
+      <tab-control
+        :titles="tabControlTitles"
+        @tabClick="tabClick"
+        class="home-tab-control"
+        ref="tabControl2"
+      />
+      <!-- 商品展示 -->
+      <goods-list :goods="goods[curType].list" />
     </scroll>
-    <back-top @click.native="topClick" v-show="isShowBackTop"/>
+
+    <!-- 回到顶部,监听组件的原生事件必须要用native修饰符变成原生组件 -->
+    <transition name="scroll">
+      <back-top @click.native="backTop" v-show="curPosition >= 1500" />
+    </transition>
   </div>
 </template>
 
 <script>
+import NavBar from "@/components/common/navbar/NavBar";
+import Scroll from "@/components/common/scroll/Scroll";
+import TabControl from "@/components/content/tabControl/TabControl";
+import GoodsList from "@/components/content/goods/GoodsList";
+import BackTop from "@/components/content/backTop/BackTop";
 
-  import HomeSwiper from "./childComps/HomeSwiper";
-  import HomeRecommendView from "./childComps/HomeRecommendView";
-  import FeatureView from "./childComps/FeatureView";
+import MySwiper from "@/components/common/swiper/MySwiper";
+import RecommendView from "./children/RecommendView";
+import FeatureView from "./children/FeatureView";
 
-  import NavBar from "components/common/navbar/NavBar";
-  import TabControl from "components/content/tabControl/TabControl";
-  import GoodsList from "components/content/goods/GoodsList";
-  import Scroll from "components/common/scroll/Scroll";
-  import BackTop from "components/content/backTop/BackTop";
+import { getHomeGoodsData, getHomeMultiData } from "@/network/home";
+import { backTopMixin, imgListenerMixin } from "@/common/mixin";
 
-  import {
-    getHomeMultidata,
-    getHomeGoods,
-  } from "network/home";
-  import {debounce} from "common/utils";
-
-
-  export default {
-    name: "Home",
-    components: {// 注册组件
-      HomeRecommendView,
-      HomeSwiper,
-      FeatureView,
-
-      NavBar,
-      TabControl,
-      GoodsList,
-      Scroll,
-      BackTop,
-    },
-    data() {
-      return {
-        banners: [],
-        recommends: [],
-        goods: {
-          'pop': {page: 0,list: []},
-          'new': {page: 0,list: []},
-          'sell': {page: 0,list: []},
-        },
-        currentType: 'pop',
-        isShowBackTop: false,
-        tabOffsetTop: 0,
-        isTabFixed: false,
-        saveY: 0
-      }
-    },
-    //生命周期函数
-    created() {//声明周期函数  这里是当这个组件一创建完成 就执行这个函数
-      //1.请求多个数据
-      this.getHomeMultidata()
-      // 2.请求商品数据
-      this.getHomeGoods('pop')
-      this.getHomeGoods('new')
-      this.getHomeGoods('sell')
-    },
-    mounted() {
-      // 调用下面的防抖函数 可以将refresh函数传入debounce函数中,生成一个新的函数,
-      // 之后在调用非常频繁的时候,就调用这个新的函数
-      // 注意: 在这里往debounce函数里面传值的时候 ,需要将这个函数传入,在传入的时候不要在函数后面加(),
-      // 加上() 这个函数就执行了,传过去的就是函数执行结束后的返回值
-      const refresh = debounce(this.$refs.scroll.refresh,50)
-      // 用于监听goodsListItem 中的img图片是否加载完成
-      this.$bus.$on('itemImageLoad',() => {
-        refresh()
-      })
-    },
-    // 当这个组件销毁时,执行的函数
-    destroyed() {
-      console.log('home destroyed');
-    },
-    // 当组件处于活跃时, 执行此函数
-    activated() {
-      // 指定移动到某个位置
-      this.$refs.scroll.scrollTo(0, this.saveY, 0);
-      this.$refs.scroll.refresh();
-    },
-    // 离开组件(组件不处于活跃状态了), 执行此函数
-    deactivated() {
-      this.saveY = this.$refs.scroll.getScrollY();
-    },
-
-    //计算属性
-    computed: {
-      showGoods() {
-        return this.goods[this.currentType].list
-      }
+export default {
+  name: "Home",
+  components: {
+    NavBar,
+    Scroll,
+    TabControl,
+    GoodsList,
+    BackTop,
+    MySwiper,
+    RecommendView,
+    FeatureView
+  },
+  data() {
+    return {
+      banners: [],
+      recommends: [],
+      tabControlTitles: ["流行", "新款", "精选"],
+      goods: {
+        pop: { page: 0, list: [] },
+        new: { page: 0, list: [] },
+        sell: { page: 0, list: [] }
+      },
+      curType: "pop",
+      // 当前吸顶的位置
+      tabOffsetTop: 0
+    };
+  },
+  // vue重复代码的混入
+  mixins: [imgListenerMixin, backTopMixin],
+  computed: {
+    isShowTab() {
+      return this.curPosition >= this.tabOffsetTop;
     }
-    ,
-    methods: {
-      /*
-      *  事件监听相关的方法
-      * */
-      tabClick (index ) {
-        //根据index获取goods 对象里面的keys 值
-        this.currentType = Object.keys(this.goods)[index]
-        // console.log(this.currentType);
-
-        // 由于我们上面使用了两次tabControl 这个组件,要使这个组件的状态一致
-        this.$refs.tabControl1.currentIndex = index;
-        this.$refs.tabControl2.currentIndex = index;
-      },
-      topClick() {
-        //设置组件的ref,通过$refs 拿到这个组件对象,根据这个对象 来访问组件里面的属性和方法
-        this.$refs.scroll.scrollTo(0,0)
-      },
-      contentScroll (position) {
-        // 判断backTop是否显示
-        //这里由于 position.y 得到的值是一个负值,需要将它转为正值来进行对比
-        this.isShowBackTop = (-position.y) > 1000
-
-        //判断 tabControl 是否显示
-        this.isTabFixed = (-position.y) > this.tabOffsetTop
-      },
-      loadMore() {
-        // console.log('上拉加载更多');
-        this.getHomeGoods(this.currentType)
-      },
-      swiperImageLoad() {
-        this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop
-      },
-
-      /*
-      * 网络请求相关的方法
-       */
-      getHomeMultidata() {
-        //1.请求多个数据
-        getHomeMultidata().then(res => {
-          this.banners = res.data.data.banner.list
-          this.recommends = res.data.data.recommend.list
-        })
-      },
-      //2.请求多个商品数据
-      getHomeGoods(type) {
-        const page = this.goods[type].page + 1
-
-        //调用network 网络请求模块里面的方法,用于请求数据
-        getHomeGoods(type,page).then(res => {
-          // console.log(res);
-          this.goods[type].list.push(...res.data.data.list)
-          this.goods[type].page += 1
-
-          // 在每次处罚上拉加载更多事件后,在函数调用的末尾,都应该调用 finishPullUp方法,在这个方法调用前,不会处罚下一次 pullingUp事件
-          this.$refs.scroll.finishPullUp()
-        })
+  },
+  methods: {
+    // 1、请求多个数据
+    getHomeMultiData() {
+      getHomeMultiData().then(res => {
+        // console.log(res);
+        this.banners = res.data.banner.list;
+        this.recommends = res.data.recommend.list;
+      });
+    },
+    // 2、请求商品数据
+    getHomeGoodsData(type) {
+      const page = this.goods[type].page + 1;
+      getHomeGoodsData(type, page).then(res => {
+        // console.log(res.data.list);
+        this.goods[type].list.push(...res.data.list);
+        this.goods[type].page += 1;
+        // 调用finishPullUp可以一直加载更多
+        this.$refs.scroll.finishPullUp();
+      });
+    },
+    // 获取滚动的位置
+    backTopScroll(position) {
+      this.curPosition = position ? -position.y : 0;
+    },
+    // tabControl点击事件
+    tabClick(index) {
+      if (index === 0) {
+        this.curType = "pop";
+      } else if (index === 1) {
+        this.curType = "new";
+      } else if (index === 2) {
+        this.curType = "sell";
       }
+
+      this.$refs.tabControl.curIndex = index;
+      this.$refs.tabControl2.curIndex = index;
+    },
+    // 上拉加载
+    loadMore() {
+      this.getHomeGoodsData(this.curType);
+    },
+    // 监听轮播图加载完成
+    swiperLoad() {
+      // 获取tabControl的位置
+      this.tabOffsetTop = this.$refs.tabControl2.$el.offsetTop;
     }
+  },
+  created() {
+    this.getHomeMultiData();
+    this.getHomeGoodsData("pop");
+    this.getHomeGoodsData("new");
+    this.getHomeGoodsData("sell");
+  },
+  // keep-alive状态下进来的时候的生命周期
+  activated() {
+    // 同时刷新better-scroll防止不能滚动
+    this.$refs.scroll.refresh();
+  },
+  // keep-alive状态下离开的时候的生命周期
+  deactivated() {
+    // 取消home组件事件总线的监听
+    this.$bus.$off("imgLoad", this.imgListener);
   }
-
-
-
+};
 </script>
 
 <style scoped>
+.home {
+  position: relative;
+  height: 100%;
+}
 
-  #home {
-    height: 100vh;
-    position: relative;
-  }
+.home .home-nav {
+  font-weight: 600;
+  color: white;
+  background-color: #ff8198;
+}
 
-  .home-nav {
-    background-color: var(--color-tint);
-    color: #f6f6f6;
-    z-index: 9;
-  }
+/* 导航吸顶 */
+.home-tab-control {
+  position: relative;
+  z-index: 3;
+  background-color: white;
+}
 
-  .content {
-    overflow: hidden;
+/* BScroll固定高度和区域 */
+.scroll-height {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  bottom: 50px;
+  left: 0;
+  overflow: hidden;
+}
 
-    position: absolute;
-    top: 44px;
-    bottom: 49px;
-    left: 0;
-    right: 0;
-  }
+/* vue的淡入淡出动画 */
+.scroll-enter-active,
+.scroll-leave-active {
+  transition: all 0.3s;
+}
 
-  .tab-control {
-    position: relative;
-    /*注意: z-index 只对定位元素起作用*/
-    z-index: 10;
-  }
+.scroll-enter,
+.scroll-leave-to {
+  opacity: 0;
+}
 
+.scroll-enter-to,
+.scroll-leave {
+  opacity: 1;
+}
 </style>

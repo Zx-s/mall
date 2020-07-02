@@ -1,27 +1,12 @@
-import {request} from "./request";
-export function getHomeMultidata() {
-  return request({
-    url:'/home/multidata'
-  })
+export function getHomeMultiData() {
+  return axios({
+    url: "/home/multidata"
+  }).catch(err => err);
 }
 
-
-export function getHomeGoods(type,page) {
-  return request({
-    url: '/home/data',
-    params: {
-      type,
-      page
-    }
-  })
+export function getHomeGoodsData(type, page) {
+  return axios({
+    url: "/home/data",
+    params: { type, page }
+  }).catch(err => err);
 }
-
-
-
-
-// 函数调用 => 压入函数栈(保存函数调用过程中的所有变量)
-// 函数调用结束 => 弹出函数栈(释放函数中所有的变量)
-function test() {
-  const names =['zhangsan','lisi']
-}
-test()

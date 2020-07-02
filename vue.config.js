@@ -1,34 +1,52 @@
 module.exports = {
+  // publicPath: './',
+  productionSourceMap: false,
+  publicPath: process.env.NODE_ENV === "production" ? "/shop" : "./",
+  // publicPath: process.env.NODE_ENV === 'production' ? './' +config.build.assetsPublicPath: './' + config.dev.assetsPublicPath,
+  chainWebpack: config => {
+    // 发布阶段打包入口
+    config.when(process.env.NODE_ENV === "production", config => {
+      config
+        .entry("app")
+        .clear()
+        .add("./src/main-prod.js");
+
+      // 配置cdn依赖
+      config.set("externals", {
+        vue: "Vue",
+        "better-scroll": "BScroll",
+        vant: "vant"
+      });
+
+      // 是否发布模式,是
+      config.plugin("html").tap(args => {
+        args[0].isProd = true;
+        return args;
+      });
+    });
+    // 开发阶段打包入口
+    config.when(process.env.NODE_ENV === "development", config => {
+      config
+        .entry("app")
+        .clear()
+        .add("./src/main-dev.js");
+      // 是否发布模式,否
+      config.plugin("html").tap(args => {
+        args[0].isProd = false;
+        return args;
+      });
+    });
+  },
   configureWebpack: {
     resolve: {
-      extensions: [],//设置一些需要省略的后缀名  默认已经配置了 .css .js .vue
-      alias: {//配置路径的别名
-        'assets': '@/assets',
-        'common': '@/common',
-        'components': '@/components',
-        'network': '@/network',
-        'views': '@/views',
+      // 配置路径别名
+      alias: {
+        assets: "@/assets",
+        common: "@/common",
+        components: "@/components",
+        network: "@/network",
+        views: "@/views"
       }
     }
-  },
-  css: {
-    loaderOptions: {
-      postcss: {
-        plugins: [
-          require('postcss-plugin-px2rem')({
-            rootValue: 32, //换算基数， 默认100
-            // unitPrecision: 5, //允许REM单位增长到的十进制数字。
-            //propWhiteList: [],  //默认值是一个空数组，这意味着禁用白名单并启用所有属性。
-            // propBlackList: [], //黑名单
-            exclude: /(node_module)/,  //默认false，可以（reg）利用正则表达式排除某些文件夹的方法，例如/(node_module)/ 。如果想把前端UI框架内的px也转换成rem，请把此属性设为默认值
-            // selectorBlackList: [], //要忽略并保留为px的选择器
-            // ignoreIdentifier: false,  //（boolean/string）忽略单个属性的方法，启用ignoreidentifier后，replace将自动设置为true。
-            // replace: true, // （布尔值）替换包含REM的规则，而不是添加回退。
-            mediaQuery: false,  //（布尔值）允许在媒体查询中转换px。
-            minPixelValue: 3 //设置要替换的最小像素值(3px会被转rem)。 默认 0
-          })
-        ]
-      }
-    }
-  },
-}
+  }
+};

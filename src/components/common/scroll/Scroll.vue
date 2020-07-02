@@ -1,90 +1,80 @@
 <template>
-
-  <div class="wrapper" ref="wrapper">
-    <div class="content">
-      <slot></slot>
+  <div class="scroll-wrapper" ref="wrapper">
+    <div class="scroll-content">
+      <slot />
     </div>
   </div>
 </template>
 
 <script>
-  import BScroll from 'better-scroll'
-  // 这是一个利用 better-scroll 替代原生滚动
-  export default {
-    name: "Scroll",
-    props: {
-      probeType: {
-        type: Number,
-        default: 0
-      },
-      pullUpLoad: {
-        type: Boolean,
-        default: false
+import BScroll from "better-scroll";
+
+export default {
+  name: "Scroll",
+  props: {
+    probeType: {
+      type: Number,
+      default() {
+        return 0;
       }
     },
-    //定义属性,用于保存数据
-    data() {
-      return {
-        scroll: null,
-        isShow: false,
+    pullUpLoad: {
+      type: Boolean,
+      default() {
+        return false;
       }
+    }
+  },
+  data() {
+    return {
+      scroll: null
+    };
+  },
+  mounted() {
+    this.scroll = new BScroll(this.$refs.wrapper, {
+      // 开启点击事件,默认是false
+      click: true,
+      // 0和1不监听滚动事件,2监听但是不监听手指松开后的滑动距离,3全部监听
+      probeType: this.probeType,
+      // 是否开启监听滚动到底部事件
+      pullUpLoad: this.pullUpLoad
+    });
+
+    //监听滚动的位置
+    if (this.probeType === 2 || this.probeType === 3) {
+      this.scroll.on("scroll", position => {
+        this.$emit("backTopScroll", position);
+      });
+    }
+
+    // 监听scroll滚动到底部
+    if (this.pullUpLoad) {
+      this.scroll.on("pullingUp", () => {
+        // console.log("滚动到底部了");
+        this.$emit("pullingUp");
+      });
+    }
+  },
+  methods: {
+    // 第一个参数x轴的距离,第二个参数y轴的距离,第三个参数是延迟时间
+    scrollTo(x, y, time = 500) {
+      this.scroll && this.scroll.scrollTo(x, y, time);
     },
-    mounted() {
-      this.scroll = new BScroll(this.$refs.wrapper,{
-        //probeType: 用于开启和关闭 实时监听滚动位置
-        // 由于这个组件是一个公共组件, probeType不能直接为监听所有滚动,当设置为监听所有滚动时,某一个组件使用这个组件时,
-        // 它不需要监听滚动,但是这里还是在监听滚动,这样会消耗浏览器的性能的
-        probeType: this.probeType,
-
-        // pullUpLoad: true,  //开启上拉加载更多事件
-        //这里也不能直接设置,要根据调用者需要是否开启这个事件来决定
-        pullUpLoad: this.pullUpLoad,
-
-        // 当点击对象为button ... 按钮时,无论是否设置 click:false, button 都能触发点击事件,
-        // 当点击对象为 div,span,p ...标签等,必须设置 click:true ,那么才能触发点击事件
-        click: true,
-      })
-
-      // 当probeType 等于2,3时,才需要监听
-      if(this.probeType === 2 || this.probeType === 3) {
-        this.scroll.on('scroll',(position) => {
-          this.$emit('scroll', position)
-        })
-      }
-
-      // 当pullUpLoad 为true时,才执行下面代码
-      if(this.pullUpLoad) {
-        this.scroll.on('pullingUp', ()=> {
-          this.$emit('pullingUp')
-        })
-      }
-
+    // 并且是为了保证this.scroll存在才执行
+    refresh() {
+      this.scroll && this.scroll.refresh();
     },
-    methods: {
-      //es6 新语法,参数可以设置默认值,当使用这个方法时,没有传递这个参数,就使用默认值
-      scrollTo(x, y,time = 300) {
-        //调用BScroll 的回到顶部的方法,
-        // 在调用这个scroll这个对象的 scrollTo() 方法时, 先判断有没有这个scroll对象
-        this.scroll && this.scroll.scrollTo(x, y, time)
-      },
-      finishPullUp() {
-        // 在调用这个scroll这个对象的 finishPullUp() 方法时, 先判断有没有这个scroll对象
-        this.scroll && this.scroll.finishPullUp()
-      },
-      refresh() {
-        // 在调用这个scroll这个对象的 refresh() 方法时, 先判断有没有这个scroll对象
-        // console.log('----');
-        this.scroll && this.scroll.refresh()
-      },
-      getScrollY() {
-        //判断有没有 scroll这个对象
-        return this.scroll ? this.scroll.y : 0
-      }
-
+    finishPullUp() {
+      this.scroll && this.scroll.finishPullUp();
+    },
+    // 获取滚动的纵向距离
+    getScrollY() {
+      return this.scroll ? this.scroll.y : 0;
+    },
+    // 滚动到指定元素
+    scrollToElement(el, time) {
+      this.scroll.scrollToElement(el, time);
     }
   }
+};
 </script>
-
-<style scoped>
-
-</style>
